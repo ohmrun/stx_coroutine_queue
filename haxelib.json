@@ -1,0 +1,22 @@
+{
+    "name": "stx_queue",
+    "license": "MIT",
+    "tags": [
+        "cross",
+        "functional"
+    ],
+    "description": "Coroutine interface for core-haxe/queue-core",
+    "contributors": [
+        "0b1kn00b"
+    ],
+    "releasenote": "git dependencies",
+    "version": "0.1.0",
+    "url": "https://github.com/ohmrun/stx_queue",
+    "dependencies": {
+        "stx_pico" : "",
+        "stx_nano" : "",
+        "stx_asys" : "",
+        "stx_coroutine" : "" 
+    },
+    "classPath": "src/main/haxe"
+}

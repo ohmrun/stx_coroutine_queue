@@ -1,0 +1,40 @@
+{
+  "version": "1",
+  "build": {
+    "-D": [
+      "no-deprecation-warnings"
+    ],
+    "-lib": [
+      "stx_pico",
+      "stx_nano",
+      "stx_asys",
+      "stx_coroutine",
+      "stx_log"
+    ],
+    "-cp": [
+      "src/main/haxe"
+    ],
+    "unit": {
+      "--macro": [
+        "include('stx.asys.Queue',true)",
+        "include('stx.asys.queue',true,[])"
+      ],
+      "interp": {
+        "--interp": true
+      }
+    },
+    "test": {
+      "-cp": [
+        "src/test/haxe"
+      ],
+      "-lib": [
+        "stx_test",
+        "stx_log"
+      ],
+      "-main": "stx.asys.queue.Test",
+      "interp": {
+        "--interp": true
+      }
+    }
+  }
+}
