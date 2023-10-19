@@ -16,7 +16,8 @@
         "stx_pico" : "",
         "stx_nano" : "",
         "stx_asys" : "",
-        "stx_coroutine" : "" 
+        "stx_coroutine" : "",
+        "queues-core" : ""
     },
     "classPath": "src/main/haxe"
 }

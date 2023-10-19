@@ -5,11 +5,13 @@
       "no-deprecation-warnings"
     ],
     "-lib": [
+      "queues-core",
       "stx_pico",
       "stx_nano",
       "stx_asys",
       "stx_coroutine",
-      "stx_log"
+      "stx_log",
+      "stx_data"
     ],
     "-cp": [
       "src/main/haxe"
