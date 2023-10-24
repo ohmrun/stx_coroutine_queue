@@ -4,6 +4,7 @@ using stx.Nano;
 using stx.Test;
 using stx.Log;
 using stx.ASys;
+using stx.Stream;
 using stx.asys.Queue;
 
 @stx.test.async
@@ -14,7 +15,7 @@ class Test extends TestCase{
             logic -> logic.or(
               logic.tags(
                 []
-                //["stx/stream","eu/ohrmun/fletcher"]
+                //["stx/stream/scheduler"]
               )
             )
           )
@@ -30,45 +31,47 @@ class Test extends TestCase{
     final qI                = __.asys().queue().Queue.Make(queueI);
     final qIA               = qI.provide(QueueStart)
                                .provide(QueueEnque(1))
-                               .provide(QueueRequest())
+                               .provide(QueueGet())
                                .provide(QueueStop);
 
     var queueII:IQueue<Int>  = queues.QueueFactory.instance.createQueue(queues.QueueFactory.SIMPLE_QUEUE);
     final qII                = __.asys().queue().Queue.Make(queueII);
     final qIIA               = qII.provide(QueueStart)
-                              .provide(QueueRequest())
+                              .provide(QueueGet(null,true))
                               .provide(QueueEnque(10))
                               .provide(QueueStop);
                           
 
     var stopped = 0;
-    function handler(self){
-      //trace(self);
-      switch(self){
-        case Emit(o,next) :
-          //trace(o);
-          handler(next);
-        case Wait(tran)   :
-          //trace('wait');
-        case Hold(held)   :
-          //trace('held $held');
-          held.handle(
-            (x) -> {
-              //trace('future $x');
-              handler(x);
-            }
-          );
-        case Halt(r)      :
-          trace(r);
-          stopped = stopped + 1;
-          if(stopped == 2){
-            async.done();
-          }
+    
+    final l = qIA.relate(
+      o -> {
+        trace(o);
+        return __.report();
       }
-    }
-    handler(qIA);
-    handler(qIIA);
+    ).derive(() -> Right(Stop))
+     .complete(r -> {trace(r);})
+     .toExecute();
 
+     final r = qIIA.relate(
+      o -> {
+        trace(o);
+        return __.report();
+      }
+    ).derive(() -> Right(Stop))
+     .complete(r -> {
+      trace(r);
+     })
+     .toExecute();
 
+     l.and(r).deliver(
+      report -> {
+        report.fold(
+          err -> refuse(err),
+          ()  -> pass()
+        );
+        async.done();
+      }
+     ).submit();
   }
 }

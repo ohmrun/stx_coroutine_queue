@@ -2,18 +2,18 @@ package stx.asys.queue;
 
 class QueueCtr extends Clazz{
   public function Make<T>(iqueue:IQueue<T>,?buffer:SettableStoreApi<TimeStamp,T>){
-    final id = __.uuid('xxxxx');
-    final executions = [];//ersatz stream
-    //Collector for errors related to the buffer.
-    final context = Execute.context(executions).errate(e -> QueueFailure.fromDataFailure(e));
+    final id          = __.uuid('xxxxx');
+    final triggers    = Stream.trigger(); 
+    final stream      = triggers.asStream();
+    final context     = Execute.context(stream);
 
     if(buffer == null){
       buffer = new MemorySettableStoreOfTimeStamp();
     }
     function put(v:T){
-      trace('$id put $v');
+      __.log().trace('$id put $v');
       //make sure the buffer is alright
-      executions.push(buffer.set((LogicalClock.unit():TimeStampDef),v));
+      triggers.trigger(Val(buffer.set((LogicalClock.unit():TimeStampDef),v).errate(e -> QueueFailure.fromDataFailure(e))));
       return new Promise(
         (resolve,reject) -> {
           context.deliver(
@@ -27,47 +27,53 @@ class QueueCtr extends Clazz{
       );
     }
     final q = iqueue;
-
-    q.onMessage = (t:T)-> {
-      return put(t);
-    }
+          q.onMessage = (t:T)-> { return put(t); }
       
     function is_ok_transformer(p:Promise<Bool>){
-      final tr      = Pledge.trigger();
-      p.then(
-        (t:Bool) -> {
-          tr.trigger(__.accept(t));
-        },
-        (a:Any) -> {
-          tr.trigger(__.reject(f -> f.of(E_Io_Exception(new haxe.ValueException(a)))));
-        } 
-      );
-      return tr;
+      return Pledge.lift(new Future(
+        (cb) -> {
+          p.then(
+            (t:Bool) -> {
+              __.log().trace('$id accept $t');
+              cb(__.accept(t));
+            },
+            (a:Any) -> {
+              __.log().trace('$id reject $a');
+              cb(__.reject(f -> f.of(E_Io_Exception(new haxe.ValueException(a)))));
+            } 
+          );
+          return ()->{};
+        }
+      ));
     }
     var main    = null;
-    final next  = __.hold(Held.Pause(
-      () -> __.hold(Held.Guard(context.alert().flat_fold(
+    final call  = () -> {
+      //execute context on turnaround
+      __.log().trace('$id call');
+      return __.hold(Held.Guard(context.alert().flat_fold(
         er -> __.exit(er),
         () -> {
-          return Future.sync(main);
+          __.log().trace('$id main');
+          return Future.irreversible(cb -> cb(main));
         }
-      )
-    ))));
+      )));
+    }
+    final next  = __.hold(Held.Pause(call));
     main = __.tran(
-     function rec(p:QueueInput<T>){
-        trace('${id} ${p}');
+     function rec(p:QueueRequest<T>){
+        __.log().trace('${id} ${p}');
         return switch(p){
           case QueueConfig(o) : 
             q.config(o);
             next;
           case QueueStart : 
             final p         = q.start();
-            final trigger   = is_ok_transformer(p);
+            final pledge   = is_ok_transformer(p);
             __.hold(
               Held.Guard(
-                trigger.toPledge().flat_fold(
+                pledge.flat_fold(
                   b -> switch(b){
-                    case true : next;
+                    case true : __.hold(Held.Pause(call));
                     default   : __.quit(__.fault().of(E_Queue_Io(E_Io_CannotStart)));
                   },
                   e -> __.quit(e)
@@ -76,10 +82,10 @@ class QueueCtr extends Clazz{
             );
           case QueueStop : 
             final p         = q.stop();
-            final trigger   = is_ok_transformer(p);
+            final pledge   = is_ok_transformer(p);
             __.hold(
               Held.Guard(
-                trigger.toPledge().flat_fold(
+                pledge.flat_fold(
                   b -> switch(b){
                     case true : __.prod(Nada);
                     default   : __.quit(__.fault().of(E_Queue_Io(E_Io_CannotStop)));
@@ -94,39 +100,53 @@ class QueueCtr extends Clazz{
           case QueueReque(t,delay) : 
             q.requeue(t,delay);
             next;
-          case QueueRequest(len) : 
-            trace('$id request');
-              var report = Report.unit();
-              var value  = __.option();
+          case QueueGet(len,wait) : 
+            __.log().trace('$id request');
+            var report      = Report.unit();
+            var done        = false;
+            var value       = __.option();
 
-            __.hold(Held.Guard(buffer.itr().errate(e -> QueueFailure.fromDataFailure(e)).point(
+            final keys        = buffer.itr().errate(e -> QueueFailure.fromDataFailure(e));
+            
+            final come_back_later = (len) -> {
+              __.log().trace('$id do later');
+              return __.tran(
+                function(x:QueueRequest<T>){
+                  __.log().trace('$id fork $x');
+                  return switch(x){
+                    case QueueEnque(_) : 
+                      next.provide(x).provide(QueueGet(len));
+                    default :
+                      next;
+                  };
+                }
+              );
+            }
+            final get_values_now = (keys) -> { 
+              __.log().trace('$id do now');
+              return __.hold(
+                Held.Arrow(
+                  buffer.rem_all(keys).errate(e -> QueueFailure.fromDataFailure(e))
+                        .map(arr -> __.emit(QueueGot(arr),next))
+                )
+              );
+            }
+            final together = keys.convert(
               keys -> {
-                trace('$id keys ${keys}');
-                if(len!=null){
-                  keys = keys.ltaken(len);
-                }
-                
-                return buffer.get_all(keys).errate(e -> QueueFailure.fromDataFailure(e)).command(
-                  __.command(
-                    (values:Cluster<T>) -> {
-                      trace('$id values');
-                      value = __.option(values);
-                    }
-                  )
-                ).and(Execute.fromThunk(() -> buffer.del_all(keys).errate(e -> QueueFailure.fromDataFailure(e))));
+                __.log().trace('$id $keys');
+                if(len!=null){    keys = keys.ltaken(len); }
+                if(len == null){  len = keys.length; }
+                if(len == 0){     len = 1; }
+                return if(wait && keys.length<len){
+                  come_back_later(len);
+                }else{
+                  get_values_now(keys);
+                };
               }
-            ).deliver(
-              (r) -> {
-                for(err in r){
-                  report = Report.pure(err);
-                }
-              } 
-            ).reply().map(
-              (_) -> return report.fold(
-                e   -> __.exit(e),
-                ()  -> __.emit(QueueReceive(value.defv([].imm())),next)
-              )
-            )));
+            );
+            __.hold(Held.Arrow(together));
+          case QueueIdle : 
+            __.hold(Held.Pause(call));                
         }
      }
     );
@@ -136,7 +156,7 @@ class QueueCtr extends Clazz{
     return next;
   }
 }
-typedef QueueDef<T> = Coroutine<QueueInput<T>,QueueOutput<T>,Nada,QueueFailure>;
+typedef QueueDef<T> = Coroutine<QueueRequest<T>,QueueResponse<T>,Nada,QueueFailure>;
 
 @:using(stx.asys.queue.Queue.QueueLift)
 abstract Queue<T>(QueueDef<T>) from QueueDef<T> to QueueDef<T>{

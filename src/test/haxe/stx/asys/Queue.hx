@@ -5,11 +5,11 @@ class  QueueModuleLift{
     return new stx.asys.queue.Module();
   }
 }
-typedef QueueOutput<T>    = stx.asys.queue.QueueOutput<T>;
-typedef QueueOutputSum<T> = stx.asys.queue.QueueOutput.QueueOutputSum<T>;
+typedef QueueResponse<T>    = stx.asys.queue.QueueResponse<T>;
+typedef QueueResponseSum<T> = stx.asys.queue.QueueResponse.QueueResponseSum<T>;
 
-typedef QueueInput<T>       = stx.asys.queue.QueueInput<T>;
-typedef QueueInputSum<T>    = stx.asys.queue.QueueInput.QueueInputSum<T>;
+typedef QueueRequest<T>       = stx.asys.queue.QueueRequest<T>;
+typedef QueueRequestSum<T>    = stx.asys.queue.QueueRequest.QueueRequestSum<T>;
 
 typedef QueueCtr            = stx.asys.queue.Queue.QueueCtr;
 typedef Queue<T>            = stx.asys.queue.Queue<T>;
