@@ -1,4 +1,4 @@
-package stx.asys.queue;
+package stx.coroutine.queue;
 
 enum QueueRequestSum<T>{ 
   QueueIdle;
@@ -7,9 +7,9 @@ enum QueueRequestSum<T>{
   QueueStop;
   QueueEnque(t:T);
   QueueReque(t:T,?delay:Int);
-  QueueGet(?len:Null<Int>,?wait:Bool);
+  QueueDeque(?len:Null<Int>,?wait:Bool);
 }
-@:using(stx.asys.queue.QueueRequest.QueueRequestLift)
+@:using(stx.coroutine.queue.QueueRequest.QueueRequestLift)
 abstract QueueRequest<T>(QueueRequestSum<T>) from QueueRequestSum<T> to QueueRequestSum<T>{
   static public var _(default,never) = QueueRequestLift;
   public inline function new(self:QueueRequestSum<T>) this = self;

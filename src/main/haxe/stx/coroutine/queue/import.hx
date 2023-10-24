@@ -1,4 +1,4 @@
-package stx.asys.queue;
+package stx.coroutine.queue;
 
 using stx.fail.QueueFailure;
 
@@ -10,9 +10,9 @@ using stx.Pico;
 using stx.Coroutine;
 using stx.coroutine.Core;
 using eu.ohmrun.Fletcher;
-using stx.ASys;
+using stx.Coroutine;
 using stx.Io;
-using stx.asys.Queue;
+using stx.coroutine.Queue;
 using stx.data.Store;
 
-using stx.asys.queue.Logging;
+using stx.coroutine.queue.Logging;

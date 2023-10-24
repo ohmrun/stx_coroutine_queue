@@ -18,8 +18,8 @@
     ],
     "unit": {
       "--macro": [
-        "include('stx.asys.Queue',true)",
-        "include('stx.asys.queue',true,[])"
+        "include('stx.coroutine.Queue',true)",
+        "include('stx.coroutine.queue',true,[])"
       ],
       "interp": {
         "--interp": true
@@ -33,7 +33,7 @@
         "stx_test",
         "stx_log"
       ],
-      "-main": "stx.asys.queue.Test",
+      "-main": "stx.coroutine.queue.Test",
       "interp": {
         "--interp": true
       }

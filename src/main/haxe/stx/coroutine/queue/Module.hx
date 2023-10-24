@@ -1,4 +1,4 @@
-package stx.asys.queue;
+package stx.coroutine.queue;
 
 class Module extends Clazz{
   @:isVar public var Queue(get,null):QueueCtr;

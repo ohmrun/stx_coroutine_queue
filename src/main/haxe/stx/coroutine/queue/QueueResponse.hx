@@ -1,9 +1,9 @@
-package stx.asys.queue;
+package stx.coroutine.queue;
 
 enum QueueResponseSum<T>{
   QueueGot(cl:Cluster<T>);
 }
-@:using(stx.asys.queue.QueueResponse.QueueResponseLift)
+@:using(stx.coroutine.queue.QueueResponse.QueueResponseLift)
 abstract QueueResponse<T>(QueueResponseSum<T>) from QueueResponseSum<T> to QueueResponseSum<T>{
   static public var _(default,never) = QueueResponseLift;
   public inline function new(self:QueueResponseSum<T>) this = self;

@@ -1,4 +1,4 @@
-package stx.asys.queue;
+package stx.coroutine.queue;
 
 class QueueCtr extends Clazz{
   public function Make<T>(iqueue:IQueue<T>,?buffer:SettableStoreApi<TimeStamp,T>){
@@ -100,7 +100,7 @@ class QueueCtr extends Clazz{
           case QueueReque(t,delay) : 
             q.requeue(t,delay);
             next;
-          case QueueGet(len,wait) : 
+          case QueueDeque(len,wait) : 
             __.log().trace('$id request');
             var report      = Report.unit();
             var done        = false;
@@ -115,7 +115,7 @@ class QueueCtr extends Clazz{
                   __.log().trace('$id fork $x');
                   return switch(x){
                     case QueueEnque(_) : 
-                      next.provide(x).provide(QueueGet(len));
+                      next.provide(x).provide(QueueDeque(len));
                     default :
                       next;
                   };
@@ -158,7 +158,7 @@ class QueueCtr extends Clazz{
 }
 typedef QueueDef<T> = Coroutine<QueueRequest<T>,QueueResponse<T>,Nada,QueueFailure>;
 
-@:using(stx.asys.queue.Queue.QueueLift)
+@:using(stx.coroutine.queue.Queue.QueueLift)
 abstract Queue<T>(QueueDef<T>) from QueueDef<T> to QueueDef<T>{
   static public var _(default,never) = QueueLift;
   public inline function new(self:QueueDef<T>) this = self;
